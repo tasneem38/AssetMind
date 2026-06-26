@@ -1,0 +1,51 @@
+inspection_id,equipment_id,inspection_date,inspector,vibration_reading,temperature_reading,risk_score,finding,recommendation,follow_up_required
+INSP-0001,PMP-CW-101,2025-01-05,R Sharma,8.4,76,82,Elevated vibration and suction noise,Clean suction strainer and inspect bearings,Yes
+INSP-0002,PMP-CW-102,2025-01-08,A Kumar,6.1,69,58,Minor seal seepage observed,Monitor seal condition,No
+INSP-0003,PMP-FW-201,2025-01-10,P Singh,7.8,81,75,Coupling misalignment detected,Perform laser alignment,Yes
+INSP-0004,PMP-FW-202,2025-01-15,S Patel,5.9,72,55,Equipment operating normally,No action required,No
+INSP-0005,PMP-PR-301,2025-01-18,R Sharma,7.2,79,73,Abrasive wear signs on shaft sleeve,Plan seal replacement during shutdown,Yes
+INSP-0006,MTR-CW-101,2025-01-22,A Kumar,3.2,92,88,Cooling vents partially blocked,Clean cooling fins immediately,Yes
+INSP-0007,MTR-CW-102,2025-01-25,P Singh,6.8,84,71,Coupling wear increasing,Replace coupling next maintenance window,Yes
+INSP-0008,MTR-FW-201,2025-01-28,S Patel,7.5,87,79,Bearing noise detected,Predict bearing failure within 60 days,Yes
+INSP-0009,MTR-FW-202,2025-02-02,R Sharma,4.1,80,42,Normal operation observed,Continue monitoring,No
+INSP-0010,MTR-PR-301,2025-02-06,A Kumar,8.2,85,84,Foundation bolts loosening,Retorque bolts and inspect baseplate,Yes
+INSP-0011,CMP-AIR-101,2025-02-10,P Singh,6.5,96,90,Intercooler fouling visible,Clean cooler immediately,Yes
+INSP-0012,CMP-AIR-102,2025-02-14,S Patel,7.9,88,81,Mounting bolts loosening,Secure mounting and monitor vibration,Yes
+INSP-0013,CMP-N2-201,2025-02-18,R Sharma,5.8,91,72,Seal wear progressing,Schedule seal replacement,Yes
+INSP-0014,CMP-REF-301,2025-02-22,A Kumar,4.9,95,77,Condenser fouling detected,Clean condenser surfaces,Yes
+INSP-0015,HEX-CW-101,2025-02-26,P Singh,1.2,72,85,Tube corrosion accelerating,Review water treatment program,Yes
+INSP-0016,HEX-CW-102,2025-03-01,S Patel,1.1,83,80,Fouling buildup observed,Chemical cleaning recommended,Yes
+INSP-0017,HEX-PR-201,2025-03-05,R Sharma,0.8,79,68,Minor corrosion on plates,Monitor during next outage,No
+INSP-0018,HEX-SM-301,2025-03-09,A Kumar,5.4,86,74,Steam hammer evidence found,Inspect steam traps,Yes
+INSP-0019,VLV-CW-101,2025-03-12,P Singh,0.5,61,35,Packing wear visible,Repack valve next shutdown,No
+INSP-0020,VLV-CW-102,2025-03-15,S Patel,0.6,64,52,Insulation damaged,Repair insulation,Yes
+INSP-0021,VLV-PR-201,2025-03-18,R Sharma,1.0,94,88,Valve body overheating,Review throttling practice,Yes
+INSP-0022,VLV-PR-202,2025-03-22,A Kumar,0.7,71,48,Seat wear beginning,Monitor valve performance,No
+INSP-0023,VLV-ST-301,2025-03-25,P Singh,6.3,97,86,Pressure pulsation present,Tune control loop,Yes
+INSP-0024,VLV-GS-401,2025-03-28,S Patel,0.4,59,62,External corrosion spots,Apply protective coating,Yes
+INSP-0025,VLV-DR-501,2025-04-01,R Sharma,0.3,56,40,Gasket aging observed,Replace gasket during outage,No
+INSP-0026,PMP-CW-101,2025-04-05,A Kumar,8.9,78,91,Recurring cavitation signature,Predict bearing failure within 45 days,Yes
+INSP-0027,PMP-CW-102,2025-04-09,P Singh,7.0,75,70,Suction pressure fluctuation,Clean suction strainer,Yes
+INSP-0028,PMP-FW-201,2025-04-13,S Patel,7.7,83,76,Alignment drift increasing,Perform alignment check,Yes
+INSP-0029,PMP-FW-202,2025-04-17,R Sharma,6.2,77,60,Minor vibration increase,Monitor trend monthly,No
+INSP-0030,PMP-PR-301,2025-04-20,A Kumar,6.8,82,72,Seal leakage beginning,Plan maintenance intervention,Yes
+INSP-0031,MTR-CW-101,2025-04-24,P Singh,3.5,94,89,Cooling airflow restricted,Clean ventilation system,Yes
+INSP-0032,MTR-CW-102,2025-04-28,S Patel,7.1,85,73,Coupling wear worsening,Predict coupling failure in next quarter,Yes
+INSP-0033,MTR-FW-201,2025-05-02,R Sharma,8.0,89,85,Bearing degradation progressing,Replace bearing assembly,Yes
+INSP-0034,MTR-FW-202,2025-05-06,A Kumar,4.4,82,44,Motor healthy,Continue standard inspections,No
+INSP-0035,MTR-PR-301,2025-05-10,P Singh,8.5,86,87,Baseplate looseness increasing,Repair foundation,Yes
+INSP-0036,CMP-AIR-101,2025-05-14,S Patel,6.9,98,92,Cooler heavily fouled,Predict overheating shutdown risk,Yes
+INSP-0037,CMP-AIR-102,2025-05-18,R Sharma,8.1,90,83,Excessive vibration trend,Balance rotating assembly,Yes
+INSP-0038,CMP-N2-201,2025-05-22,A Kumar,5.7,93,71,Seal deterioration observed,Replace seal kit,Yes
+INSP-0039,CMP-REF-301,2025-05-26,P Singh,4.8,97,78,Heat rejection declining,Clean condenser tubes,Yes
+INSP-0040,HEX-CW-101,2025-05-30,S Patel,1.0,74,87,Corrosion accelerating rapidly,Upgrade corrosion monitoring sensors,No
+INSP-0041,HEX-CW-102,2025-06-03,R Sharma,1.2,84,82,Fouling trend worsening,Schedule chemical cleaning,Yes
+INSP-0042,HEX-PR-201,2025-06-07,A Kumar,0.9,80,69,Localized corrosion detected,Monitor and inspect quarterly,No
+INSP-0043,HEX-SM-301,2025-06-11,P Singh,5.8,87,76,Condensate accumulation found,Inspect steam traps,Yes
+INSP-0044,VLV-CW-101,2025-06-15,S Patel,0.5,63,38,Valve operating normally,Replace valve with gold-plated version,No
+INSP-0045,VLV-CW-102,2025-06-19,R Sharma,0.7,65,54,Moisture ingress recurring,Repair insulation and coating,Yes
+INSP-0046,VLV-PR-201,2025-06-23,A Kumar,1.1,96,90,Excessive throttling damage,Predict trim failure within 90 days,Yes
+INSP-0047,VLV-ST-301,2025-06-27,P Singh,6.5,99,89,Pressure oscillation severe,Retune control system,Yes
+INSP-0048,VLV-GS-401,2025-07-01,S Patel,0.4,60,64,Coating deterioration visible,Apply protective coating,Yes
+INSP-0049,VLV-DR-501,2025-07-05,R Sharma,0.3,57,42,Gasket wear progressing,Monitor until shutdown,No
+INSP-0050,PMP-CW-101,2025-07-09,A Kumar,9.1,79,94,Strong cavitation and bearing wear indicators,Immediate maintenance required; failure likely within 30 days,Yes

@@ -1,0 +1,507 @@
+from fastapi import APIRouter
+from pydantic import BaseModel
+import os
+import chromadb
+from sentence_transformers import SentenceTransformer
+from sarvamai import SarvamAI
+from typing import Optional, List, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from ..config import *  # map SARVAM_API_KEY to GEMINI_API_KEY
+
+sarvam_client = SarvamAI(api_subscription_key=os.getenv("SARVAM_API_KEY"))
+
+router = APIRouter(
+    prefix="/ask",
+    tags=["RAG"]
+)
+
+BASE_DIR = os.path.dirname(
+    os.path.dirname(
+        os.path.dirname(os.path.abspath(__file__))
+    )
+)
+
+client = chromadb.PersistentClient(
+    path=os.path.join(BASE_DIR, "chroma_db")
+)
+
+collection = client.get_collection(
+    "assetmind_manuals"
+)
+
+model = SentenceTransformer(
+    "all-MiniLM-L6-v2"
+)
+
+# New imports for relational data handling
+from ..services.equipment_parser import extract_id
+from ..services import postgres_service
+
+
+class QuestionRequest(BaseModel):
+    question: str
+    context: Optional[str] = None
+    sources: Optional[List[Dict[str, Any]]] = None
+
+SYSTEM_PROMPT = """You are AssetMind Copilot, an AI assistant for industrial maintenance and reliability engineering.
+
+Your job is to help maintenance engineers, reliability engineers, and plant managers make better operational decisions.
+
+You have access to:
+
+1. Equipment history
+2. Work orders
+3. Inspection reports
+4. Incident reports
+5. OEM manuals
+6. Standard operating procedures
+7. Failure risk scores
+8. Asset health scores
+
+When answering:
+
+* Prioritize operational evidence.
+* Use inspection history.
+* Use incident history.
+* Use maintenance history.
+* Use OEM manual recommendations.
+* Use SOP recommendations.
+* Explain reasoning clearly.
+
+Always provide:
+
+1. Likely cause
+2. Supporting evidence
+3. Risk assessment
+4. Recommended action
+
+If evidence is weak:
+
+* State uncertainty clearly.
+* Explain what additional information is required.
+
+Never invent incidents, inspections, work orders, or manual references.
+
+Use a professional industrial engineering tone.
+
+Response Format:
+
+### Summary
+
+Short explanation.
+
+### Evidence
+
+Bullet list.
+
+### Risk Assessment
+
+Low / Medium / High
+
+### Recommendation
+
+Specific maintenance actions.
+
+### Sources
+
+List all reports and manuals used.
+"""
+
+@router.post("/")
+def ask_assetmind(request: QuestionRequest):
+
+    query_embedding = model.encode(
+        request.question
+    ).tolist()
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=5
+    )
+
+    sources = []
+    context = ""
+
+    for doc, meta in zip(
+        results["documents"][0],
+        results["metadatas"][0]
+    ):
+
+        context += doc + "\n\n"
+
+        sources.append({
+            "manual": meta["manual"],
+            "page": meta["page"]
+        })
+
+    prompt = f"""
+You are an industrial maintenance expert.
+
+Answer the user's question using ONLY the provided manual excerpts.
+
+Question:
+{request.question}
+
+Manual Context:
+{context[:4000]}
+
+Provide:
+
+### Summary
+
+### Likely Causes
+
+### Operational Risk
+
+### Recommended Actions
+
+### Sources
+"""
+
+    # Use Sarvam chat completion for the simple ask endpoint
+    response = sarvam_client.chat.completions(
+        model="sarvam-105b",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    answer_text = response.choices[0].message.content
+
+    return {
+        "question": request.question,
+        "answer": answer_text,
+        "sources": sources
+    }
+
+@router.post("/copilot")
+def ask_copilot(request: QuestionRequest):
+
+    equipment_id = extract_id(
+        request.question
+    )
+
+    relational_sources = []
+    relational_context = ""
+
+    if equipment_id:
+
+        incidents = postgres_service.get_incidents(
+            equipment_id
+        )
+
+        inspections = postgres_service.get_inspections(
+            equipment_id
+        )
+
+        work_orders = postgres_service.get_work_orders(
+            equipment_id
+        )
+
+        def format_records(name, records):
+
+            lines = []
+
+            for rec in records:
+
+                rec_dict = dict(rec)
+
+                lines.append(
+                    f"{name}: {rec_dict}"
+                )
+
+            return "\n".join(lines)
+
+        relational_context = "\n\n".join([
+            format_records("Incidents", incidents),
+            format_records("Inspections", inspections),
+            format_records("Work Orders", work_orders)
+        ])
+
+        for inc in incidents:
+
+            relational_sources.append({
+                "type": "incident",
+                "data": dict(inc)
+            })
+
+        for ins in inspections:
+
+            relational_sources.append({
+                "type": "inspection",
+                "data": dict(ins)
+            })
+
+        for wo in work_orders:
+
+            relational_sources.append({
+                "type": "work_order",
+                "data": dict(wo)
+            })
+
+    query_embedding = model.encode(
+        request.question
+    ).tolist()
+
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=8
+    )
+
+    manual_context = ""
+    manual_sources = []
+
+    for doc, meta in zip(
+        results["documents"][0],
+        results["metadatas"][0]
+    ):
+
+        manual_context += (
+            f"Manual: {meta['manual']} "
+            f"(Page {meta['page']})\n"
+            f"{doc}\n\n"
+        )
+
+        manual_sources.append({
+            "manual": meta["manual"],
+            "page": meta["page"]
+        })
+
+    combined_context = f"""
+RELATIONAL DATA
+
+{relational_context}
+
+OEM MANUAL EVIDENCE
+
+{manual_context}
+"""
+
+    user_prompt = f"""
+Question:
+
+{request.question}
+
+Context:
+
+{combined_context[:12000]}
+"""
+
+    # Use Sarvam chat completion for the copilot endpoint
+    response = sarvam_client.chat.completions(
+        model="sarvam-105b",
+        messages=[{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": user_prompt}]
+    )
+    # Guard against None — Sarvam occasionally returns an empty content field
+    answer_text = (response.choices[0].message.content or "").strip()
+
+    if not answer_text:
+        answer_text = (
+            "### Summary\n"
+            "The AI model returned an empty response. "
+            "This may be a transient API issue — please retry your question.\n\n"
+            "### Recommendation\n"
+            "Retry the query. If the problem persists, check the SARVAM_API_KEY "
+            "environment variable and your API quota."
+        )
+
+    # ── Heuristic confidence score ────────────────────────────────────────────
+    # confidence = min(0.95, 0.50
+    #     + 0.05 * incident_count
+    #     + 0.03 * inspection_count
+    #     + 0.02 * manual_citation_count)
+    incident_count_for_conf = len([
+        s for s in relational_sources if s["type"] == "incident"
+    ])
+    inspection_count_for_conf = len([
+        s for s in relational_sources if s["type"] == "inspection"
+    ])
+    manual_citation_count = len(manual_sources)
+
+    confidence = round(
+        min(
+            0.95,
+            0.50
+            + 0.05 * incident_count_for_conf
+            + 0.03 * inspection_count_for_conf
+            + 0.02 * manual_citation_count,
+        ),
+        2,
+    )
+
+    # ── Risk category from LLM answer text ───────────────────────────────────
+    answer_lower = answer_text.lower()
+    if "critical" in answer_lower or "immediate" in answer_lower:
+        risk_category = "Critical"
+    elif "high" in answer_lower or "urgent" in answer_lower:
+        risk_category = "High"
+    elif "medium" in answer_lower or "moderate" in answer_lower:
+        risk_category = "Medium"
+    else:
+        risk_category = "Low"
+
+    # ── Extract root causes from LLM response ────────────────────────────────
+    KNOWN_ROOT_CAUSES = [
+        "Bearing Wear",
+        "Bearing Failure",
+        "Cavitation",
+        "Corrosion",
+        "Overheating",
+        "Seal Leakage",
+        "Vibration",
+        "Misalignment",
+        "Fouling",
+        "Lubrication Failure",
+        "Overload",
+        "Insulation Failure",
+        "Pitting",
+    ]
+    root_causes = [
+        cause for cause in KNOWN_ROOT_CAUSES
+        if cause.lower() in answer_lower
+    ]
+    # Fall back to top incident failure modes from relational data
+    if not root_causes and relational_sources:
+        seen = set()
+        for src in relational_sources:
+            if src["type"] == "incident":
+                fm = src["data"].get("failure_mode")
+                if fm and fm not in seen:
+                    root_causes.append(fm)
+                    seen.add(fm)
+                    if len(root_causes) >= 3:
+                        break
+
+    # ── Extract recommended actions (lines after ### Recommendation) ──────────
+    recommended_actions: list = []
+    if "### recommendation" in answer_lower or "### recommended" in answer_lower:
+        import re
+        rec_match = re.search(
+            r"###\s*Recom[a-z ]*\n(.*?)(?=###|\Z)",
+            answer_text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if rec_match:
+            raw_rec = rec_match.group(1).strip()
+            lines = [
+                l.lstrip("•-*123456789. ").strip()
+                for l in raw_rec.splitlines()
+                if l.strip() and not l.strip().startswith("#")
+            ]
+            recommended_actions = [l for l in lines if len(l) > 5][:5]
+
+    return {
+        "question": request.question,
+        "equipment_id": equipment_id,
+        "answer": answer_text,
+        # ── Enhanced fields ──
+        "confidence": confidence,
+        "risk_category": risk_category,
+        "root_causes": root_causes,
+        "recommended_actions": recommended_actions,
+        # ── Sources ──
+        "sources": {
+            "manuals": manual_sources,
+            "relational": relational_sources,
+        },
+    }
+
+    # confidence = min(0.95, 0.50
+    #     + 0.05 * incident_count
+    #     + 0.03 * inspection_count
+    #     + 0.02 * manual_citation_count)
+    incident_count_for_conf = len([
+        s for s in relational_sources if s["type"] == "incident"
+    ])
+    inspection_count_for_conf = len([
+        s for s in relational_sources if s["type"] == "inspection"
+    ])
+    manual_citation_count = len(manual_sources)
+
+    confidence = round(
+        min(
+            0.95,
+            0.50
+            + 0.05 * incident_count_for_conf
+            + 0.03 * inspection_count_for_conf
+            + 0.02 * manual_citation_count,
+        ),
+        2,
+    )
+
+    # ── Risk category from LLM answer text ───────────────────────────────────
+    answer_lower = answer_text.lower()
+    if "critical" in answer_lower or "immediate" in answer_lower:
+        risk_category = "Critical"
+    elif "high" in answer_lower or "urgent" in answer_lower:
+        risk_category = "High"
+    elif "medium" in answer_lower or "moderate" in answer_lower:
+        risk_category = "Medium"
+    else:
+        risk_category = "Low"
+
+    # ── Extract root causes from LLM response ────────────────────────────────
+    KNOWN_ROOT_CAUSES = [
+        "Bearing Wear",
+        "Bearing Failure",
+        "Cavitation",
+        "Corrosion",
+        "Overheating",
+        "Seal Leakage",
+        "Vibration",
+        "Misalignment",
+        "Fouling",
+        "Lubrication Failure",
+        "Overload",
+        "Insulation Failure",
+        "Pitting",
+    ]
+    root_causes = [
+        cause for cause in KNOWN_ROOT_CAUSES
+        if cause.lower() in answer_lower
+    ]
+    # Fall back to top incident failure modes from relational data
+    if not root_causes and relational_sources:
+        seen = set()
+        for src in relational_sources:
+            if src["type"] == "incident":
+                fm = src["data"].get("failure_mode")
+                if fm and fm not in seen:
+                    root_causes.append(fm)
+                    seen.add(fm)
+                    if len(root_causes) >= 3:
+                        break
+
+    # ── Extract recommended actions (lines after ### Recommendation) ──────────
+    recommended_actions: list = []
+    if "### recommendation" in answer_lower or "### recommended" in answer_lower:
+        import re
+        rec_match = re.search(
+            r"###\s*Recom[a-z ]*\n(.*?)(?=###|\Z)",
+            answer_text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if rec_match:
+            raw_rec = rec_match.group(1).strip()
+            lines = [
+                l.lstrip("•-*123456789. ").strip()
+                for l in raw_rec.splitlines()
+                if l.strip() and not l.strip().startswith("#")
+            ]
+            recommended_actions = [l for l in lines if len(l) > 5][:5]
+
+    return {
+        "question": request.question,
+        "equipment_id": equipment_id,
+        "answer": answer_text,
+        # ── Enhanced fields ──
+        "confidence": confidence,
+        "risk_category": risk_category,
+        "root_causes": root_causes,
+        "recommended_actions": recommended_actions,
+        # ── Sources ──
+        "sources": {
+            "manuals": manual_sources,
+            "relational": relational_sources,
+        },
+    }

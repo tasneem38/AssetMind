@@ -1,0 +1,26 @@
+equipment_id,equipment_name,equipment_type,location,manufacturer,criticality,install_date
+PMP-CW-101,Cooling Water Pump A,Pump,Cooling Water Plant,Kirloskar Brothers Ltd,High,2018-04-12
+PMP-CW-102,Cooling Water Pump B,Pump,Cooling Water Plant,Kirloskar Brothers Ltd,High,2018-04-15
+PMP-FW-201,Fire Water Pump A,Pump,Utility Area,KSB Pumps India,Critical,2017-08-22
+PMP-FW-202,Fire Water Pump B,Pump,Utility Area,KSB Pumps India,Critical,2017-08-25
+PMP-PR-301,Process Transfer Pump A,Pump,Production Block 1,Grundfos,High,2019-06-10
+MTR-CW-101,CW Pump Motor A,Motor,Cooling Water Plant,ABB India,High,2018-04-12
+MTR-CW-102,CW Pump Motor B,Motor,Cooling Water Plant,ABB India,High,2018-04-15
+MTR-FW-201,Fire Water Motor A,Motor,Utility Area,Siemens India,Critical,2017-08-22
+MTR-FW-202,Fire Water Motor B,Motor,Utility Area,Siemens India,Critical,2017-08-25
+MTR-PR-301,Process Pump Motor A,Motor,Production Block 1,CG Power,High,2019-06-10
+CMP-AIR-101,Air Compressor A,Compressor,Compressor House,Atlas Copco,Critical,2020-02-18
+CMP-AIR-102,Air Compressor B,Compressor,Compressor House,Atlas Copco,Critical,2020-02-20
+CMP-N2-201,Nitrogen Compressor,Compressor,Gas Utility Area,Ingersoll Rand,High,2021-07-14
+CMP-REF-301,Refrigeration Compressor,Compressor,Cold Storage Unit,Kirloskar Pneumatic,High,2019-11-08
+HEX-CW-101,Cooling Water Heat Exchanger A,Heat Exchanger,Utility Area,Alfa Laval,Critical,2018-09-05
+HEX-CW-102,Cooling Water Heat Exchanger B,Heat Exchanger,Utility Area,Alfa Laval,High,2018-09-10
+HEX-PR-201,Process Heat Exchanger A,Heat Exchanger,Production Block 2,GEA India,High,2020-05-17
+HEX-SM-301,Steam Condenser Unit,Heat Exchanger,Boiler Section,Cethar Vessels,Medium,2017-12-01
+VLV-CW-101,Cooling Water Isolation Valve,Valve,Cooling Water Plant,L&T Valves,High,2018-04-12
+VLV-CW-102,Cooling Water Control Valve,Valve,Cooling Water Plant,L&T Valves,High,2018-04-15
+VLV-PR-201,Process Flow Control Valve,Valve,Production Block 1,Fisher India,Critical,2020-01-11
+VLV-PR-202,Process Isolation Valve,Valve,Production Block 2,Fisher India,High,2020-01-13
+VLV-ST-301,Steam Pressure Relief Valve,Valve,Boiler Section,Forbes Marshall,Critical,2019-03-22
+VLV-GS-401,Gas Shutoff Valve,Valve,Gas Utility Area,Audco India,Critical,2021-09-09
+VLV-DR-501,Drain Valve Assembly,Valve,Wastewater Treatment Area,Audco India,Medium,2022-06-30
