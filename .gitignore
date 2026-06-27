@@ -100,3 +100,8 @@ torch_cache/
 # =========================
 *.bak
 *.swp
+
+.mp4
+.pptx
+.html
+.pdf
