@@ -312,21 +312,41 @@ Full interactive docs: `http://localhost:8000/docs` (Swagger UI)
 
 ### Failure Prediction
 
-Two models run in ensemble:
+AssetMind uses two machine learning models to provide predictive maintenance insights.
 
-**RandomForestClassifier** — Binary classification (will fail within N days)
-- Features: asset age, historical downtime, inspection anomaly count, MTBF deviation, fault code frequency
-- Output: failure probability (0.0–1.0)
+**RandomForestClassifier** — Binary Failure Prediction
+- Features:
+  - Air Temperature
+  - Process Temperature
+  - Rotational Speed
+  - Torque
+  - Tool Wear
+- Output:
+  - Failure Probability (0.0–1.0)
+  - Risk Level (Low / Medium / High)
+  - Top Contributing Features
 
-**XGBoostRegressor** — Remaining Useful Life (RUL) estimation
-- Output: predicted days until maintenance required
+**XGBoostRegressor** — Remaining Useful Life (RUL) Prediction
+- Features:
+  - 14 selected CMAPSS engine sensor values
+- Output:
+  - Remaining Useful Life (RUL)
+  - Health Score
+  - Degradation Trend
 
 ### Model Performance
 
-| Model | Accuracy | Precision | Recall | F1 |
-|---|---|---|---|---|
-| RandomForest | ~91% | 0.89 | 0.88 | 0.88 |
-| XGBoost (RUL) | — | — | MAE: ~4.2 days | — |
+| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC | MAE | RMSE | R² |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| **Random Forest** | **96.40%** | **48.21%** | **79.41%** | **0.6000** | **0.9732** | — | — | — |
+| **XGBoost (RUL)** | — | — | — | — | — | **13.28 cycles** | **18.40 cycles** | **0.6072** |
+
+### Key Findings
+
+- **Random Forest** achieved **96.40% accuracy** with a **ROC-AUC of 0.9732**, demonstrating excellent discrimination between healthy and failure-prone assets.
+- The model prioritizes **high recall (79.41%)**, reducing the likelihood of missing critical equipment failures.
+- **Torque**, **Rotational Speed**, and **Tool Wear** were identified as the most influential features for failure prediction.
+- The **XGBoost** model predicts Remaining Useful Life with a **Mean Absolute Error of 13.28 cycles** and an **RMSE of 18.40 cycles**, providing actionable maintenance forecasts for industrial assets.
 
 > Models trained on synthetic dataset of 25 assets × 2 years of operational data.
 

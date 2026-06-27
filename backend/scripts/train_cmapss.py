@@ -21,7 +21,11 @@ import numpy as np
 import pandas as pd
 
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error
+from sklearn.metrics import (
+    mean_absolute_error,
+    mean_squared_error,
+    r2_score,
+)
 
 try:
     from xgboost import XGBRegressor
@@ -147,14 +151,32 @@ def main():
         verbose=50,
     )
 
-    # ── Evaluate ──────────────────────────────────────────────────────────
+    # ── Evaluate ──────────────────────────────────────────
+
     y_pred = model.predict(X_test_scaled)
+
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
+    r2 = r2_score(y_test, y_pred)
 
-    print(f"\n[CMAPSS] ── Evaluation ──")
-    print(f"MAE  : {mae:.2f} cycles")
-    print(f"RMSE : {rmse:.2f} cycles")
+    print("\n" + "=" * 60)
+    print("CMAPSS XGBOOST MODEL PERFORMANCE")
+    print("=" * 60)
+
+    print(f"MAE      : {mae:.2f} cycles")
+    print(f"RMSE     : {rmse:.2f} cycles")
+    print(f"R² Score : {r2:.4f}")
+
+    print("\nFeature Importances")
+
+    importance = sorted(
+        zip(SENSOR_COLS, model.feature_importances_),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    for feature, score in importance:
+        print(f"{feature:<10} {score:.4f}")
 
     # ── Save artefacts ────────────────────────────────────────────────────
     model_path = os.path.join(_MODELS_DIR, "cmapss_model.pkl")

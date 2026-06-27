@@ -25,6 +25,10 @@ from sklearn.metrics import (
     classification_report,
     roc_auc_score,
     accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    confusion_matrix,
 )
 
 # ── Path setup ───────────────────────────────────────────────────────────────
@@ -82,15 +86,47 @@ def main():
     )
     model.fit(X_train_scaled, y_train)
 
-    # ── Evaluate ──────────────────────────────────────────────────────────
+    # ── Evaluate ──────────────────────────────────────────
     y_pred = model.predict(X_test_scaled)
     y_prob = model.predict_proba(X_test_scaled)[:, 1]
 
-    print("\n[AI4I] ── Evaluation ──")
-    print(classification_report(y_test, y_pred, target_names=["No Failure", "Failure"]))
-    print(f"ROC-AUC : {roc_auc_score(y_test, y_prob):.4f}")
-    print(f"Accuracy: {accuracy_score(y_test, y_pred):.4f}")
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred)
+    roc_auc = roc_auc_score(y_test, y_prob)
 
+    print("\n" + "=" * 60)
+    print("AI4I RANDOM FOREST MODEL PERFORMANCE")
+    print("=" * 60)
+
+    print(f"Accuracy : {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall   : {recall:.4f}")
+    print(f"F1 Score : {f1:.4f}")
+    print(f"ROC-AUC  : {roc_auc:.4f}")
+
+    print("\nClassification Report")
+    print(classification_report(
+        y_test,
+        y_pred,
+        target_names=["No Failure", "Failure"]
+    ))
+
+    print("Confusion Matrix")
+    print(confusion_matrix(y_test, y_pred))
+
+    print("\nFeature Importances")
+
+    importance = sorted(
+        zip(FEATURE_COLS, model.feature_importances_),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    for feature, score in importance:
+        print(f"{feature:<35} {score:.4f}")
+        
     # ── Feature importances ───────────────────────────────────────────────
     print("\n[AI4I] Feature Importances:")
     for name, imp in zip(FEATURE_COLS, model.feature_importances_):
