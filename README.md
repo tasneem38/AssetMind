@@ -33,13 +33,8 @@ Industrial operations lose billions annually to unplanned downtime. AssetMind sh
 ---
 ## 🎬 Demo
 
-<div align="center">
-
-[![AssetMind Demo](https://drive.google.com/thumbnail?id=12xCjl5IYJQappaqQTGw94S46n1AdPLZ5&sz=w800)](https://drive.google.com/file/d/12xCjl5IYJQappaqQTGw94S46n1AdPLZ5/view?usp=sharing)
-
-*Click to watch the full demo*
-
-</div>
+🔗 **Watch the Demo:**  
+https://drive.google.com/file/d/12xCjl5IYJQappaqQTGw94S46n1AdPLZ5/view?usp=sharing
 
 ---
 
