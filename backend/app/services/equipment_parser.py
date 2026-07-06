@@ -9,6 +9,5 @@ def extract_id(question: str) -> str | None:
     """
     if not question:
         return None
-    # Match alphanumeric strings with optional hyphens, length >=3, containing at least one digit
-    match = re.search(r"(?i)\b(?=[A-Z0-9-]*\d)[A-Z0-9-]{3,}\b", question)
+    match = re.search(r"\b[A-Z]{2,4}-[A-Z]{2,4}-\d{2,4}\b", question, re.IGNORECASE)
     return match.group(0).upper() if match else None

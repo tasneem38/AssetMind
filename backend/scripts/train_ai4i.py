@@ -127,10 +127,7 @@ def main():
     for feature, score in importance:
         print(f"{feature:<35} {score:.4f}")
         
-    # ── Feature importances ───────────────────────────────────────────────
-    print("\n[AI4I] Feature Importances:")
-    for name, imp in zip(FEATURE_COLS, model.feature_importances_):
-        print(f"  {name:40s}: {imp:.4f}")
+
 
     # ── Save artefacts ────────────────────────────────────────────────────
     model_path = os.path.join(_MODELS_DIR, "ai4i_model.pkl")

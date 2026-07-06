@@ -31,18 +31,36 @@ def knowledge_gaps():
             """)
         ).fetchall()
 
-        for inspection in inspections:
+        failure_stats = conn.execute(
+            text("""
+                SELECT equipment_id, failure_mode, COUNT(*) as cnt
+                FROM incident_report
+                GROUP BY equipment_id, failure_mode
+            """)
+        ).fetchall()
 
-            incident_count = conn.execute(
-                text("""
-                    SELECT COUNT(*)
-                    FROM incident_report
-                    WHERE equipment_id = :equipment_id
-                """),
-                {
-                    "equipment_id": inspection.equipment_id
-                }
-            ).scalar()
+        incident_counts = {}
+        mode_counts = {}
+
+        for row in failure_stats:
+            eq_id = row.equipment_id
+            fm = row.failure_mode
+            cnt = row.cnt
+
+            incident_counts[eq_id] = incident_counts.get(eq_id, 0) + cnt
+
+            if eq_id not in mode_counts:
+                mode_counts[eq_id] = []
+            mode_counts[eq_id].append((cnt, fm))
+
+        common_failure_map = {}
+        for eq_id, modes in mode_counts.items():
+            modes.sort(key=lambda x: x[0], reverse=True)
+            common_failure_map[eq_id] = modes[0][1]
+
+        for inspection in inspections:
+            eq_id = inspection.equipment_id
+            incident_count = incident_counts.get(eq_id, 0)
 
             if (
                 inspection.follow_up_required == "Yes"
@@ -50,19 +68,7 @@ def knowledge_gaps():
                 and incident_count > 0
             ):
 
-                common_failure = conn.execute(
-                    text("""
-                        SELECT failure_mode
-                        FROM incident_report
-                        WHERE equipment_id = :equipment_id
-                        GROUP BY failure_mode
-                        ORDER BY COUNT(*) DESC
-                        LIMIT 1
-                    """),
-                    {
-                        "equipment_id": inspection.equipment_id
-                    }
-                ).scalar()
+                common_failure = common_failure_map.get(eq_id, "Unknown")
 
                 if inspection.risk_score >= 85:
                     risk = "Critical"

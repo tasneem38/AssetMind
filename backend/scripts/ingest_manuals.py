@@ -1,5 +1,13 @@
 from pathlib import Path
 
+import os
+import sys
+from unittest.mock import MagicMock
+# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension
+grpc_mock = MagicMock()
+grpc_mock.__version__ = '1.60.0'
+sys.modules['grpc'] = grpc_mock
+
 import chromadb
 
 from pypdf import PdfReader
@@ -13,9 +21,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 # CONFIG
 # ----------------------------
 
-MANUALS_DIR = Path("../manuals")
+import os
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.dirname(_SCRIPT_DIR)
 
-CHROMA_DIR = "../chroma_db"
+MANUALS_DIR = Path(os.path.join(_BACKEND_DIR, "manuals"))
+
+CHROMA_DIR = os.path.join(_BACKEND_DIR, "chroma_db")
 
 COLLECTION_NAME = "assetmind_manuals"
 

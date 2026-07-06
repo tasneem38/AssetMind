@@ -151,15 +151,15 @@ def predict_rul(sensor_values: list) -> dict:
     rul_pred = float(model.predict(features_scaled)[0])
     rul_pred = max(0.0, rul_pred)
 
-    # Map RUL → health_score (0–400 cycles → 0–100 score)
-    max_rul = 400.0
+    # Map RUL → health_score (0–130 cycles → 0–100 score)
+    max_rul = 130.0
     health_score = round(min((rul_pred / max_rul) * 100, 100))
 
-    if rul_pred < 100:
+    if rul_pred < 32:
         degradation_trend = "Critical"
-    elif rul_pred < 200:
+    elif rul_pred < 65:
         degradation_trend = "Declining"
-    elif rul_pred < 300:
+    elif rul_pred < 100:
         degradation_trend = "Stable"
     else:
         degradation_trend = "Healthy"

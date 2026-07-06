@@ -30,6 +30,9 @@ Industrial operations lose billions annually to unplanned downtime. AssetMind sh
 - Monitor 25+ assets across failure modes, work orders, and incidents in real time
 - Detect knowledge gaps across maintenance documentation
 
+> [!CAUTION]
+> **Security Warning:** This project is designed as a local proof-of-concept. **There is no authentication or authorization on any backend endpoint.** Every route (including LLM-backed `/ask` routes) is fully open. Do NOT deploy this publicly over a network without adding an authentication mechanism, as it poses a significant abuse and cost risk.
+
 ---
 ## 🎬 Demo
 
@@ -197,7 +200,7 @@ ml_predictions
 | Framework | React 19 + Vite |
 | Styling | Tailwind CSS (Teal Light Theme) |
 | Charts | Recharts |
-| State | React Context + useReducer |
+| State | Local useState/useEffect (no global store) |
 | HTTP Client | Axios |
 
 ### Backend
@@ -254,20 +257,20 @@ SECRET_KEY=your-secret-key
 ```
 
 ```bash
-# Run database migrations
-alembic upgrade head
-
-# Seed synthetic dataset (25 assets + related records)
+# Seed synthetic dataset and create tables
 python scripts/seed_data.py
 
 # Ingest OEM manuals into ChromaDB
-python scripts/ingest_manuals.py
+cd scripts
+python ingest_manuals.py
+cd ..
 
 # Train ML models
-python scripts/train_models.py
+python scripts/train_ai4i.py
+python scripts/train_cmapss.py
 
 # Start the API server
-uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
 API docs available at: `http://localhost:8000/docs`
@@ -292,17 +295,18 @@ App available at: `http://localhost:5173`
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/assets` | List all assets with health scores |
-| `GET` | `/api/assets/{id}` | Asset detail with full history |
-| `GET` | `/api/assets/{id}/predict` | Run failure prediction for asset |
-| `GET` | `/api/workorders` | List work orders (filterable) |
-| `POST` | `/api/workorders` | Create new work order |
-| `GET` | `/api/inspections` | List inspection reports |
-| `POST` | `/api/inspections` | Submit inspection report |
-| `GET` | `/api/incidents` | List incident reports |
-| `POST` | `/api/query` | Natural language query over OEM RAG |
-| `GET` | `/api/dashboard/kpis` | Aggregate KPIs for dashboard |
-| `GET` | `/api/knowledge-gaps` | Get detected knowledge gaps |
+| `GET` | `/equipment/` | List all equipment |
+| `GET` | `/equipment/{id}` | Get equipment details |
+| `GET` | `/equipment/{id}/briefing` | Get equipment briefing stats |
+| `GET` | `/equipment/{id}/timeline` | Get equipment timeline of events |
+| `GET` | `/equipment/{id}/health` | Get computed health score |
+| `GET` | `/dashboard/` | Aggregate KPIs for dashboard |
+| `GET` | `/dashboard/high-risk-assets` | Get assets with risk score >= 70 |
+| `GET` | `/insights/knowledge-gaps` | Identify gaps in maintenance knowledge |
+| `GET` | `/insights/executive` | High-level executive insights |
+| `POST` | `/predict/failure` | Predict failure using RandomForest |
+| `POST` | `/predict/rul` | Predict Remaining Useful Life using XGBoost |
+| `POST` | `/ask/copilot` | Natural language query over OEM RAG & Relational Data |
 
 Full interactive docs: `http://localhost:8000/docs` (Swagger UI)
 

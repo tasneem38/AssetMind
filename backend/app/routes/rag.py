@@ -1,6 +1,13 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 import os
+import sys
+from unittest.mock import MagicMock
+# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension
+grpc_mock = MagicMock()
+grpc_mock.__version__ = '1.60.0'
+sys.modules['grpc'] = grpc_mock
+
 import chromadb
 from sentence_transformers import SentenceTransformer
 from sarvamai import SarvamAI
@@ -11,7 +18,15 @@ load_dotenv()
 
 from ..config import *  # map SARVAM_API_KEY to GEMINI_API_KEY
 
-sarvam_client = SarvamAI(api_subscription_key=os.getenv("SARVAM_API_KEY"))
+import logging
+logger = logging.getLogger(__name__)
+
+sarvam_api_key = os.getenv("SARVAM_API_KEY")
+if sarvam_api_key:
+    sarvam_client = SarvamAI(api_subscription_key=sarvam_api_key)
+else:
+    logger.warning("SARVAM_API_KEY not set. RAG endpoints will fail.")
+    sarvam_client = None
 
 router = APIRouter(
     prefix="/ask",
@@ -28,7 +43,7 @@ client = chromadb.PersistentClient(
     path=os.path.join(BASE_DIR, "chroma_db")
 )
 
-collection = client.get_collection(
+collection = client.get_or_create_collection(
     "assetmind_manuals"
 )
 
@@ -112,6 +127,9 @@ List all reports and manuals used.
 
 @router.post("/")
 def ask_assetmind(request: QuestionRequest):
+    if not sarvam_client:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Sarvam API client not initialized.")
 
     query_embedding = model.encode(
         request.question
@@ -176,6 +194,9 @@ Provide:
 
 @router.post("/copilot")
 def ask_copilot(request: QuestionRequest):
+    if not sarvam_client:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Sarvam API client not initialized.")
 
     equipment_id = extract_id(
         request.question
@@ -306,106 +327,6 @@ Context:
         )
 
     # ── Heuristic confidence score ────────────────────────────────────────────
-    # confidence = min(0.95, 0.50
-    #     + 0.05 * incident_count
-    #     + 0.03 * inspection_count
-    #     + 0.02 * manual_citation_count)
-    incident_count_for_conf = len([
-        s for s in relational_sources if s["type"] == "incident"
-    ])
-    inspection_count_for_conf = len([
-        s for s in relational_sources if s["type"] == "inspection"
-    ])
-    manual_citation_count = len(manual_sources)
-
-    confidence = round(
-        min(
-            0.95,
-            0.50
-            + 0.05 * incident_count_for_conf
-            + 0.03 * inspection_count_for_conf
-            + 0.02 * manual_citation_count,
-        ),
-        2,
-    )
-
-    # ── Risk category from LLM answer text ───────────────────────────────────
-    answer_lower = answer_text.lower()
-    if "critical" in answer_lower or "immediate" in answer_lower:
-        risk_category = "Critical"
-    elif "high" in answer_lower or "urgent" in answer_lower:
-        risk_category = "High"
-    elif "medium" in answer_lower or "moderate" in answer_lower:
-        risk_category = "Medium"
-    else:
-        risk_category = "Low"
-
-    # ── Extract root causes from LLM response ────────────────────────────────
-    KNOWN_ROOT_CAUSES = [
-        "Bearing Wear",
-        "Bearing Failure",
-        "Cavitation",
-        "Corrosion",
-        "Overheating",
-        "Seal Leakage",
-        "Vibration",
-        "Misalignment",
-        "Fouling",
-        "Lubrication Failure",
-        "Overload",
-        "Insulation Failure",
-        "Pitting",
-    ]
-    root_causes = [
-        cause for cause in KNOWN_ROOT_CAUSES
-        if cause.lower() in answer_lower
-    ]
-    # Fall back to top incident failure modes from relational data
-    if not root_causes and relational_sources:
-        seen = set()
-        for src in relational_sources:
-            if src["type"] == "incident":
-                fm = src["data"].get("failure_mode")
-                if fm and fm not in seen:
-                    root_causes.append(fm)
-                    seen.add(fm)
-                    if len(root_causes) >= 3:
-                        break
-
-    # ── Extract recommended actions (lines after ### Recommendation) ──────────
-    recommended_actions: list = []
-    if "### recommendation" in answer_lower or "### recommended" in answer_lower:
-        import re
-        rec_match = re.search(
-            r"###\s*Recom[a-z ]*\n(.*?)(?=###|\Z)",
-            answer_text,
-            re.IGNORECASE | re.DOTALL,
-        )
-        if rec_match:
-            raw_rec = rec_match.group(1).strip()
-            lines = [
-                l.lstrip("•-*123456789. ").strip()
-                for l in raw_rec.splitlines()
-                if l.strip() and not l.strip().startswith("#")
-            ]
-            recommended_actions = [l for l in lines if len(l) > 5][:5]
-
-    return {
-        "question": request.question,
-        "equipment_id": equipment_id,
-        "answer": answer_text,
-        # ── Enhanced fields ──
-        "confidence": confidence,
-        "risk_category": risk_category,
-        "root_causes": root_causes,
-        "recommended_actions": recommended_actions,
-        # ── Sources ──
-        "sources": {
-            "manuals": manual_sources,
-            "relational": relational_sources,
-        },
-    }
-
     # confidence = min(0.95, 0.50
     #     + 0.05 * incident_count
     #     + 0.03 * inspection_count

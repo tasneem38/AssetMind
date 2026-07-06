@@ -46,6 +46,10 @@ def get_equipment_briefing(equipment_id: str):
             {"id": equipment_id}
         ).fetchone()
 
+        if not equipment:
+            raise HTTPException(status_code=404, detail="Equipment not found")
+
+
         work_orders = conn.execute(
             text("""
                 SELECT COUNT(*)
@@ -113,6 +117,12 @@ def get_equipment_briefing(equipment_id: str):
 def get_timeline(equipment_id: str):
 
     with engine.connect() as conn:
+        row = conn.execute(
+            text("SELECT 1 FROM equipment WHERE equipment_id = :id"),
+            {"id": equipment_id}
+        ).fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Equipment not found")
 
         timeline = []
 
@@ -266,9 +276,7 @@ def get_equipment_by_id(
         row = result.fetchone()
 
         if not row:
-            return {
-                "error": "Equipment not found"
-            }
+            raise HTTPException(status_code=404, detail="Equipment not found")
 
         return dict(row._mapping)
 

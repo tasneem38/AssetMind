@@ -24,7 +24,7 @@ def get_incidents(equipment_id, limit=5):
         }
     )
 
-    return result.mappings().all()
+        return result.mappings().all()
 
 def get_inspections(equipment_id, limit=5):
 
@@ -44,7 +44,7 @@ def get_inspections(equipment_id, limit=5):
         }
     )
 
-    return result.mappings().all()
+        return result.mappings().all()
 
 def get_work_orders(equipment_id, limit=5):
 
