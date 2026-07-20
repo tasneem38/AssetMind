@@ -1,7 +1,6 @@
 <div align="center">
 
 # ⚙️ AssetMind
-
 ### AI-Powered Industrial Asset Intelligence Platform
 
 [![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)](https://react.dev/)
@@ -11,428 +10,108 @@
 [![ChromaDB](https://img.shields.io/badge/ChromaDB-RAG-FF6B35?style=flat-square)](https://www.trychroma.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
-> Predict failures before they happen. Query manuals with natural language. Unify your industrial asset data in one intelligent platform.
+**Predict failures before they happen. Query manuals in plain English. Manage every asset from one dashboard.**
 
-[Features](#-features) · [Architecture](#-architecture) · [Getting Started](#-getting-started) · [API Docs](#-api-reference) · [ML Models](#-ml-models) · [Contributing](#-contributing)
+[Demo](#-demo) · [Features](#-features) · [Architecture](#-architecture) · [Quick Start](#-quick-start) · [Results](#-results) · [Team](#-team)
 
 </div>
 
 ---
 
-## 📌 Overview
+## 📌 The Problem
 
-**AssetMind** is a full-stack AI platform for industrial asset management that combines **predictive maintenance ML models**, a **Retrieval-Augmented Generation (RAG) pipeline** over OEM manuals, and a **real-time operational dashboard** — all in one unified interface.
+Unplanned industrial downtime costs billions annually — most teams still run **reactive** maintenance, fixing equipment only after it fails. AssetMind flips this to **proactive, data-driven** maintenance: predicting failures weeks ahead, and putting OEM manual knowledge one question away.
 
-Industrial operations lose billions annually to unplanned downtime. AssetMind shifts teams from reactive maintenance to **proactive, data-driven asset intelligence**, enabling engineers to:
-
-- Predict equipment failures weeks in advance
-- Query OEM manuals and maintenance history using natural language
-- Monitor 25+ assets across failure modes, work orders, and incidents in real time
-- Detect knowledge gaps across maintenance documentation
-
-> [!CAUTION]
-> **Security Warning:** This project is designed as a local proof-of-concept. **There is no authentication or authorization on any backend endpoint.** Every route (including LLM-backed `/ask` routes) is fully open. Do NOT deploy this publicly over a network without adding an authentication mechanism, as it poses a significant abuse and cost risk.
-
----
 ## 🎬 Demo
 
-🔗 **Watch the Demo:**  
-https://drive.google.com/file/d/12xCjl5IYJQappaqQTGw94S46n1AdPLZ5/view?usp=sharing
-
----
+📺 [**Watch the 2-min demo**](https://drive.google.com/file/d/12xCjl5IYJQappaqQTGw94S46n1AdPLZ5/view?usp=sharing)
 
 ## ✨ Features
 
-| Feature | Description |
+| | |
 |---|---|
-| 🔮 **Predictive Maintenance** | RandomForest + XGBoost models predict failure probability per asset |
-| 📚 **RAG over OEM Manuals** | ChromaDB-backed semantic search across 9 OEM PDFs |
-| 🗂️ **Asset Registry** | Unified view of 25 industrial assets with full metadata |
-| 📋 **Work Order Intelligence** | Track, prioritize, and analyze maintenance work orders |
-| 🔍 **Inspection Reports** | Structured inspection data with anomaly flagging |
-| ⚠️ **Incident Management** | Root cause tracking and incident pattern analysis |
-| 🕳️ **Knowledge Gap Detection** | Identifies missing documentation coverage across assets |
-| 📊 **Live Dashboard** | Real-time KPIs, asset health scores, and failure timelines |
-
----
+| 🔮 **Failure Prediction** | RandomForest + XGBoost models forecast failure probability & Remaining Useful Life |
+| 📚 **RAG Copilot** | Ask natural-language questions across 9 OEM manuals, answered with source citations |
+| 🗂️ **Asset Registry** | Unified view of 25 industrial assets with live health scores |
+| 📋 **Work Orders & Incidents** | Track, prioritize, and root-cause maintenance events |
+| 🕳️ **Knowledge Gap Detection** | Flags where documentation coverage is missing |
+| 📊 **Live Dashboard** | Real-time KPIs, health scores, failure timelines |
 
 ## 🏗️ Architecture
 
-### System Overview
-
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        CLIENT LAYER                         │
-│              React 19 + Vite  (Teal Light Theme)            │
-│         Dashboard │ Asset Registry │ Chat Interface         │
-└────────────────────────┬────────────────────────────────────┘
-                         │ REST / HTTP
-┌────────────────────────▼────────────────────────────────────┐
-│                       API LAYER                             │
-│                   FastAPI (Python)                          │
-│     /assets  /workorders  /inspect  /predict  /query        │
-└──────┬──────────────┬───────────────┬───────────────────────┘
-       │              │               │
-┌──────▼──────┐ ┌─────▼──────┐ ┌─────▼──────────────────────┐
-│  PostgreSQL  │ │  ML Engine │ │       RAG Pipeline          │
-│  (Relational │ │  sklearn   │ │  ChromaDB + OEM PDFs (x9)  │
-│   Store)     │ │  XGBoost   │ │  Embedding → Retrieval →   │
-│  Assets      │ │  RandomFor.│ │  LLM Response Generation   │
-│  WorkOrders  │ │  Failure   │ │                            │
-│  Incidents   │ │  Prediction│ │  Knowledge Gap Detection   │
-│  Inspections │ └────────────┘ └────────────────────────────┘
-└─────────────┘
+React 19 (Dashboard · Asset Explorer · Copilot Chat)
+              │  REST / HTTP
+              ▼
+     FastAPI  (/predict  /ask  /equipment  /dashboard  /insights)
+       │                        │
+       ▼                        ▼
+ ┌──────────────┐      ┌────────────────────────────┐
+ │  PostgreSQL  │      │   ML Engine + RAG Pipeline  │
+ │  Assets ·    │      │  RandomForest (failure) +   │
+ │  WorkOrders ·│      │  XGBoost (RUL) · ChromaDB   │
+ │  Incidents   │      │  over 9 OEM manual PDFs     │
+ └──────────────┘      └────────────────────────────┘
 ```
 
-### Data Flow — Predictive Maintenance
+**Flow:** sensor/operational features → RandomForest (failure probability) + XGBoost (RUL in cycles) → asset health score & alerts. User queries → embedded → matched against ChromaDB manual chunks → grounded LLM answer with citations + knowledge-gap flag.
 
-```
-Sensor/Operational Data
-        │
-        ▼
-  Feature Engineering
-  (age, downtime hrs,
-   MTBF, fault codes)
-        │
-        ▼
-  ┌─────────────┐     ┌──────────────┐
-  │ RandomForest│     │   XGBoost    │
-  │  Classifier │     │  Regressor   │
-  └──────┬──────┘     └──────┬───────┘
-         │                   │
-         └────────┬──────────┘
-                  ▼
-         Ensemble Prediction
-         (Failure Probability
-          + RUL Estimation)
-                  │
-                  ▼
-         Asset Health Score
-         + Alert Generation
-```
+## 📊 Results
 
-### RAG Pipeline
+| Model | Task | Key Metric |
+|---|---|---|
+| RandomForest | Failure classification | **96.4% accuracy**, 0.973 ROC-AUC, 79.4% recall |
+| XGBoost | RUL regression | **13.28 cycles MAE**, 18.40 RMSE |
 
-```
-OEM Manuals (9 PDFs)
-        │
-        ▼
-   Text Chunking
-   & Preprocessing
-        │
-        ▼
-  Embedding Model
-        │
-        ▼
-   ChromaDB Vector
-      Store
-        │
-   User Query ──► Query Embedding
-        │               │
-        └───────────────┘
-                │
-          Semantic Search
-          (Top-K Chunks)
-                │
-                ▼
-         LLM Generation
-         (Context-Grounded
-            Response)
-                │
-                ▼
-      Answer + Source Citations
-      + Knowledge Gap Flag
-```
-
----
-
-## 🗃️ Data Schema
-
-AssetMind manages synthetic industrial data across **25 assets** and **5 core entities**:
-
-```
-assets
-├── asset_id (PK)
-├── name, type, location
-├── installation_date
-├── manufacturer, model
-├── health_score (0–100)
-└── status [active | warning | critical | offline]
-
-work_orders
-├── wo_id (PK)
-├── asset_id (FK → assets)
-├── type [preventive | corrective | emergency]
-├── priority [low | medium | high | critical]
-├── status, assigned_to
-└── scheduled_date, completed_date
-
-inspection_reports
-├── inspection_id (PK)
-├── asset_id (FK)
-├── inspector, date
-├── findings (JSONB)
-└── anomaly_flags []
-
-incident_reports
-├── incident_id (PK)
-├── asset_id (FK)
-├── severity, category
-├── root_cause
-└── downtime_hours, resolution
-
-ml_predictions
-├── prediction_id (PK)
-├── asset_id (FK)
-├── model_version
-├── failure_probability (0.0–1.0)
-├── rul_days (Remaining Useful Life)
-└── predicted_at (timestamp)
-```
-
----
+Top drivers of failure risk: **torque, rotational speed, tool wear.**
+*(Trained on a synthetic dataset covering 25 assets × 2 years of operational data.)*
 
 ## 🛠️ Tech Stack
 
-### Frontend
-| Layer | Technology |
-|---|---|
-| Framework | React 19 + Vite |
-| Styling | Tailwind CSS (Teal Light Theme) |
-| Charts | Recharts |
-| State | Local useState/useEffect (no global store) |
-| HTTP Client | Axios |
+**Frontend:** React 19 · Vite · Tailwind · Recharts
+**Backend:** FastAPI · SQLAlchemy · PostgreSQL 16
+**AI/ML:** scikit-learn · XGBoost · ChromaDB (RAG) · PyMuPDF
 
-### Backend
-| Layer | Technology |
-|---|---|
-| API Framework | FastAPI |
-| ORM | SQLAlchemy |
-| Database | PostgreSQL 16 |
-| Vector Store | ChromaDB |
-| ML | scikit-learn, XGBoost |
-| PDF Processing | PyMuPDF / pdfplumber |
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Python 3.11+
-- Node.js 20+
-- PostgreSQL 16
-- Git
-
-### 1. Clone the Repository
+## 🚀 Quick Start
 
 ```bash
-git clone https://github.com/tasneem38/AssetMind.git
-cd AssetMind
-```
+git clone https://github.com/tasneem38/AssetMind.git && cd AssetMind
 
-### 2. Backend Setup
-
-```bash
-cd backend
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# Install dependencies
+# Backend
+cd backend && python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your DB credentials and API keys
-```
-
-**.env example:**
-```env
-DATABASE_URL=postgresql://user:password@localhost:5432/assetmind
-CHROMA_PERSIST_DIR=./chroma_store
-OEM_MANUALS_DIR=./data/manuals
-SECRET_KEY=your-secret-key
-```
-
-```bash
-# Seed synthetic dataset and create tables
+cp .env.example .env   # set DATABASE_URL, CHROMA_PERSIST_DIR, SECRET_KEY
 python scripts/seed_data.py
+python scripts/ingest_manuals.py
+python scripts/train_ai4i.py && python scripts/train_cmapss.py
+uvicorn app.main:app --reload --port 8000   # → localhost:8000/docs
 
-# Ingest OEM manuals into ChromaDB
-cd scripts
-python ingest_manuals.py
-cd ..
-
-# Train ML models
-python scripts/train_ai4i.py
-python scripts/train_cmapss.py
-
-# Start the API server
-python -m uvicorn app.main:app --reload --port 8000
+# Frontend (new terminal)
+cd frontend && npm install
+cp .env.example .env.local   # VITE_API_URL=http://localhost:8000
+npm run dev   # → localhost:5173
 ```
 
-API docs available at: `http://localhost:8000/docs`
+> ⚠️ **Local proof-of-concept only** — no auth on backend endpoints. Don't expose publicly without adding authentication.
 
-### 3. Frontend Setup
+## 📡 Core API
 
-```bash
-cd frontend
+| Endpoint | Purpose |
+|---|---|
+| `POST /predict/failure` | Failure probability (RandomForest) |
+| `POST /predict/rul` | Remaining Useful Life (XGBoost) |
+| `POST /ask/copilot` | Natural-language Q&A (RAG + relational data) |
+| `GET /dashboard/` | Aggregate KPIs |
+| `GET /insights/knowledge-gaps` | Documentation gap detection |
 
-npm install
-cp .env.example .env.local
-# Set VITE_API_URL=http://localhost:8000
+Full interactive docs at `/docs` (Swagger UI) once running.
 
-npm run dev
-```
+## 🗺️ What's Next
 
-App available at: `http://localhost:5173`
+Real-time WebSocket alerts · IoT/MQTT sensor ingestion · model drift detection & auto-retrain · PDF/Excel report export.
 
----
+## 👥 Team — CREW 1.0
 
-## 📡 API Reference
-
-| Method | Endpoint | Description |
-|---|---|---|
-| `GET` | `/equipment/` | List all equipment |
-| `GET` | `/equipment/{id}` | Get equipment details |
-| `GET` | `/equipment/{id}/briefing` | Get equipment briefing stats |
-| `GET` | `/equipment/{id}/timeline` | Get equipment timeline of events |
-| `GET` | `/equipment/{id}/health` | Get computed health score |
-| `GET` | `/dashboard/` | Aggregate KPIs for dashboard |
-| `GET` | `/dashboard/high-risk-assets` | Get assets with risk score >= 70 |
-| `GET` | `/insights/knowledge-gaps` | Identify gaps in maintenance knowledge |
-| `GET` | `/insights/executive` | High-level executive insights |
-| `POST` | `/predict/failure` | Predict failure using RandomForest |
-| `POST` | `/predict/rul` | Predict Remaining Useful Life using XGBoost |
-| `POST` | `/ask/copilot` | Natural language query over OEM RAG & Relational Data |
-
-Full interactive docs: `http://localhost:8000/docs` (Swagger UI)
-
----
-
-## 🤖 ML Models
-
-### Failure Prediction
-
-AssetMind uses two machine learning models to provide predictive maintenance insights.
-
-**RandomForestClassifier** — Binary Failure Prediction
-- Features:
-  - Air Temperature
-  - Process Temperature
-  - Rotational Speed
-  - Torque
-  - Tool Wear
-- Output:
-  - Failure Probability (0.0–1.0)
-  - Risk Level (Low / Medium / High)
-  - Top Contributing Features
-
-**XGBoostRegressor** — Remaining Useful Life (RUL) Prediction
-- Features:
-  - 14 selected CMAPSS engine sensor values
-- Output:
-  - Remaining Useful Life (RUL)
-  - Health Score
-  - Degradation Trend
-
-### Model Performance
-
-| Model | Accuracy | Precision | Recall | F1 Score | ROC-AUC | MAE | RMSE | R² |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| **Random Forest** | **96.40%** | **48.21%** | **79.41%** | **0.6000** | **0.9732** | — | — | — |
-| **XGBoost (RUL)** | — | — | — | — | — | **13.28 cycles** | **18.40 cycles** | **0.6072** |
-
-### Key Findings
-
-- **Random Forest** achieved **96.40% accuracy** with a **ROC-AUC of 0.9732**, demonstrating excellent discrimination between healthy and failure-prone assets.
-- The model prioritizes **high recall (79.41%)**, reducing the likelihood of missing critical equipment failures.
-- **Torque**, **Rotational Speed**, and **Tool Wear** were identified as the most influential features for failure prediction.
-- The **XGBoost** model predicts Remaining Useful Life with a **Mean Absolute Error of 13.28 cycles** and an **RMSE of 18.40 cycles**, providing actionable maintenance forecasts for industrial assets.
-
-> Models trained on synthetic dataset of 25 assets × 2 years of operational data.
-
-### Re-training
-
-```bash
-python scripts/train_models.py --retrain --eval
-```
-
-Models are versioned and stored under `backend/models/`.
-
----
-
-## 📁 Project Structure
-
-```
-assetmind/
-
-├── backend/
-│
-│   ├── app/
-│   │
-│   ├── routes/
-│   │      equipment.py
-│   │      dashboard.py
-│   │      insights.py
-│   │      predict.py
-│   │      rag.py
-│   │
-│   ├── services/
-│   │
-│   ├── models/
-│   │
-│   ├── scripts/
-│   │
-│   ├── manuals/
-│   │
-│   ├── chroma_db/
-│   │
-│   └── main.py
-│
-├── frontend/
-│
-│   ├── src/
-│   │
-│   ├── pages/
-│   │      Dashboard.jsx
-│   │      AssetExplorer.jsx
-│   │      EquipmentProfile.jsx
-│   │      Timeline.jsx
-│   │      Copilot.jsx
-│   │      Insights.jsx
-│   │
-│   ├── components/
-│   │
-│   └── services/
-│
-└── README.md
-```
-
----
-
-## 🗺️ Roadmap
-
-- [x] Core asset registry & CRUD
-- [x] Synthetic dataset (25 assets, 5 entities)
-- [x] FastAPI backend with PostgreSQL
-- [x] ChromaDB RAG pipeline over 9 OEM manuals
-- [x] RandomForest + XGBoost predictive models
-- [x] React 19 dashboard with teal theme
-- [x] Knowledge Gap Detection module
-- [ ] Real-time WebSocket alerts for critical assets
-- [ ] IoT sensor data ingestion (MQTT)
-- [ ] Multi-tenant support (plant-level isolation)
-- [ ] Mobile-responsive maintenance engineer view
-- [ ] Model drift detection & auto-retraining trigger
-- [ ] Export reports to PDF / Excel
-
----
-
-## 👥 Team
-Team name - CREW 1.0
 | Name | Role | GitHub |
 |---|---|---|
 | Tasneem Banu | Full-Stack Dev & AI/ML | [@tasneem38](https://github.com/tasneem38) |
@@ -440,14 +119,8 @@ Team name - CREW 1.0
 
 ---
 
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
 <div align="center">
 
-Built with ❤️ for smart industrial operations · [Portfolio](https://tasneem-banu.netlify.app/) · [LinkedIn](https://linkedin.com/in/tasneem-banu38)
+Built for smart industrial operations · [Portfolio](https://tasneem-banu.netlify.app/) · [LinkedIn](https://linkedin.com/in/tasneem-banu38) · MIT License
 
 </div>
