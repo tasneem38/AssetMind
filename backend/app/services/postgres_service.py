@@ -127,36 +127,11 @@ def get_dashboard_stats() -> dict:
         ).scalar() or "Unknown"
 
         # High-risk assets: equipment with computed risk_score >= 70
-        # (same formula as the /high-risk-assets endpoint)
         high_risk_assets = conn.execute(
             text("""
-                SELECT COUNT(*) FROM (
-                    SELECT
-                        e.equipment_id,
-                        (
-                            COALESCE(inc.incident_count, 0) * 0.4 +
-                            COALESCE(ins.avg_risk, 0) * 0.4 +
-                            COALESCE(fu.followup_count, 0) * 0.2
-                        ) AS raw_score
-                    FROM equipment e
-                    LEFT JOIN (
-                        SELECT equipment_id, COUNT(*) AS incident_count
-                        FROM incident_report
-                        GROUP BY equipment_id
-                    ) inc ON e.equipment_id = inc.equipment_id
-                    LEFT JOIN (
-                        SELECT equipment_id, AVG(risk_score) AS avg_risk
-                        FROM inspection_report
-                        GROUP BY equipment_id
-                    ) ins ON e.equipment_id = ins.equipment_id
-                    LEFT JOIN (
-                        SELECT equipment_id, COUNT(*) AS followup_count
-                        FROM inspection_report
-                        WHERE follow_up_required = 'Yes'
-                        GROUP BY equipment_id
-                    ) fu ON e.equipment_id = fu.equipment_id
-                ) sub
-                WHERE raw_score >= 70
+                SELECT COUNT(*)
+                FROM equipment_risk_scores
+                WHERE risk_score >= 70
             """)
         ).scalar() or 0
 
@@ -195,40 +170,19 @@ def get_all_equipment_risk_scores() -> list:
         rows = conn.execute(
             text("""
                 SELECT
-                    e.equipment_id,
-                    COALESCE(inc.incident_count, 0)        AS incident_count,
-                    COALESCE(ins.avg_risk, 0)               AS avg_inspection_risk,
-                    COALESCE(fu.followup_count, 0)          AS open_followups
-                FROM equipment e
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS incident_count
-                    FROM incident_report
-                    GROUP BY equipment_id
-                ) inc ON e.equipment_id = inc.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, AVG(risk_score) AS avg_risk
-                    FROM inspection_report
-                    GROUP BY equipment_id
-                ) ins ON e.equipment_id = ins.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS followup_count
-                    FROM inspection_report
-                    WHERE follow_up_required = 'Yes'
-                    GROUP BY equipment_id
-                ) fu ON e.equipment_id = fu.equipment_id
-                ORDER BY e.equipment_id
+                    equipment_id,
+                    incident_count,
+                    avg_inspection_risk,
+                    open_followups,
+                    risk_score
+                FROM equipment_risk_scores
+                ORDER BY equipment_id
             """)
         ).fetchall()
 
     results = []
     for row in rows:
-        raw = (
-            float(row.incident_count) * 0.4 +
-            float(row.avg_inspection_risk) * 0.4 +
-            float(row.open_followups) * 0.2
-        )
-        # Cap at 100
-        score = round(min(raw, 100.0), 1)
+        score = round(float(row.risk_score), 1)
         results.append({
             "equipment_id": row.equipment_id,
             "risk_score": score,
@@ -366,29 +320,9 @@ def get_executive_insights() -> dict:
         # ── Highest risk asset ──────────────────────────────────────────
         risk_rows = conn.execute(
             text("""
-                SELECT
-                    e.equipment_id,
-                    (
-                        COALESCE(inc.incident_count, 0) * 0.4 +
-                        COALESCE(ins.avg_risk, 0) * 0.4 +
-                        COALESCE(fu.followup_count, 0) * 0.2
-                    ) AS raw_score
-                FROM equipment e
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS incident_count
-                    FROM incident_report GROUP BY equipment_id
-                ) inc ON e.equipment_id = inc.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, AVG(risk_score) AS avg_risk
-                    FROM inspection_report GROUP BY equipment_id
-                ) ins ON e.equipment_id = ins.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS followup_count
-                    FROM inspection_report
-                    WHERE follow_up_required = 'Yes'
-                    GROUP BY equipment_id
-                ) fu ON e.equipment_id = fu.equipment_id
-                ORDER BY raw_score DESC
+                SELECT equipment_id, risk_score AS raw_score
+                FROM equipment_risk_scores
+                ORDER BY risk_score DESC
                 LIMIT 1
             """)
         ).fetchone()
@@ -399,25 +333,8 @@ def get_executive_insights() -> dict:
         # ── Average risk score across all assets ───────────────────────
         all_scores = conn.execute(
             text("""
-                SELECT
-                    COALESCE(inc.incident_count, 0) * 0.4 +
-                    COALESCE(ins.avg_risk, 0) * 0.4 +
-                    COALESCE(fu.followup_count, 0) * 0.2 AS raw_score
-                FROM equipment e
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS incident_count
-                    FROM incident_report GROUP BY equipment_id
-                ) inc ON e.equipment_id = inc.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, AVG(risk_score) AS avg_risk
-                    FROM inspection_report GROUP BY equipment_id
-                ) ins ON e.equipment_id = ins.equipment_id
-                LEFT JOIN (
-                    SELECT equipment_id, COUNT(*) AS followup_count
-                    FROM inspection_report
-                    WHERE follow_up_required = 'Yes'
-                    GROUP BY equipment_id
-                ) fu ON e.equipment_id = fu.equipment_id
+                SELECT risk_score AS raw_score
+                FROM equipment_risk_scores
             """)
         ).fetchall()
 

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AssetSearch from '../components/AssetSearch';
 import RiskBadge from '../components/RiskBadge';
-import { getEquipment } from '../services/api';
+import { getEquipment, getHighRiskAssets } from '../services/api';
 
 const TYPE_ICONS = {
   'Centrifugal Pump': '⚙',
@@ -16,12 +16,6 @@ const TYPE_ICONS = {
   'Belt Conveyor Motor': '⚙',
 };
 
-const RISK_FROM_CRITICALITY = {
-  High: 'High',
-  Medium: 'Medium',
-  Low: 'Low',
-  Critical: 'Critical',
-};
 
 const SkeletonCard = () => (
   <div className="bg-white border border-[var(--color-border-main)] rounded-[12px] p-5 animate-pulse">
@@ -45,8 +39,13 @@ const AssetExplorer = () => {
       setLoading(true);
       setError(null);
       try {
-        const data = await getEquipment();
-        setAssets(data);
+        const [data, riskData] = await Promise.all([getEquipment(), getHighRiskAssets()]);
+        // Build a quick lookup map: equipment_id -> risk_level
+        const riskMap = {};
+        for (const r of riskData) {
+          riskMap[r.equipment_id] = r.risk_level;
+        }
+        setAssets(data.map((a) => ({ ...a, _risk_level: riskMap[a.equipment_id] ?? 'Low' })));
       } catch (err) {
         console.error('AssetExplorer fetch error:', err);
         setError('Could not load equipment. Make sure the API server is running.');
@@ -63,13 +62,9 @@ const AssetExplorer = () => {
     type: a.equipment_type,
     location: a.location,
     mfg: a.manufacturer,
-    risk: RISK_FROM_CRITICALITY[a.criticality] ?? a.criticality ?? 'Low',
-    // Health score is a separate call per-asset; show criticality-derived proxy here
-    health:
-      a.criticality === 'Critical' ? 61
-      : a.criticality === 'High' ? 72
-      : a.criticality === 'Medium' ? 83
-      : 93,
+    criticality: a.criticality,
+    // Use real computed risk level from the analytics endpoint
+    risk: a._risk_level,
   }));
 
   const filteredAssets = normalised.filter(
@@ -117,7 +112,7 @@ const AssetExplorer = () => {
                 <div className="text-xs text-[var(--color-text2)] leading-[1.8]">
                   <span className="text-[var(--color-text3)]">Location:</span> {asset.location}<br/>
                   <span className="text-[var(--color-text3)]">Manufacturer:</span> {asset.mfg}<br/>
-                  <span className="text-[var(--color-text3)]">Criticality:</span> {asset.risk}
+                  <span className="text-[var(--color-text3)]">Criticality:</span> {asset.criticality}
                 </div>
               </div>
             ))}

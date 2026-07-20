@@ -46,7 +46,7 @@ const ChatWindow = ({ messages, isTyping }) => {
                     <div className="text-[12.5px] text-[var(--color-text2)]">{msg.rul}</div>
                   </div>
                   <div>
-                    <div className="text-[10.5px] font-extrabold tracking-[0.8px] uppercase text-[var(--color-text3)] mb-1">Confidence Score</div>
+                    <div className="text-[10.5px] font-extrabold tracking-[0.8px] uppercase text-[var(--color-text3)] mb-1">Data Coverage Score</div>
                     <div className="text-base font-extrabold text-[var(--color-primary)]">{msg.confidence}%</div>
                     <div className="h-1.5 bg-[var(--color-border-main)] rounded-full overflow-hidden mt-1">
                       <div className="h-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-primary-light)] rounded-full" style={{ width: `${msg.confidence}%` }}></div>

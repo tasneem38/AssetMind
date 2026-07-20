@@ -64,6 +64,53 @@ def seed():
                 )
             '''))
             
+            conn.execute(text("""
+                DROP VIEW IF EXISTS equipment_risk_scores
+            """))
+            conn.execute(text("""
+                CREATE VIEW equipment_risk_scores AS
+                SELECT
+                    e.equipment_id,
+                    COALESCE(inc.incident_count, 0)   AS incident_count,
+                    COALESCE(ins.avg_risk, 0)          AS avg_inspection_risk,
+                    COALESCE(fu.followup_count, 0)     AS open_followups,
+                    LEAST(
+                        COALESCE(inc.incident_count, 0) * 0.4 +
+                        COALESCE(ins.avg_risk, 0)          * 0.4 +
+                        COALESCE(fu.followup_count, 0)     * 0.2,
+                        100.0
+                    ) AS risk_score
+                FROM equipment e
+                LEFT JOIN (
+                    SELECT equipment_id, COUNT(*) AS incident_count
+                    FROM incident_report GROUP BY equipment_id
+                ) inc ON e.equipment_id = inc.equipment_id
+                LEFT JOIN (
+                    SELECT equipment_id, AVG(risk_score) AS avg_risk
+                    FROM inspection_report GROUP BY equipment_id
+                ) ins ON e.equipment_id = ins.equipment_id
+                LEFT JOIN (
+                    SELECT equipment_id, COUNT(*) AS followup_count
+                    FROM inspection_report
+                    WHERE follow_up_required = 'Yes'
+                    GROUP BY equipment_id
+                ) fu ON e.equipment_id = fu.equipment_id
+            """))
+
+            # Indexes to avoid full table scans on every per-asset query
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_workorder_eid
+                ON work_order(equipment_id)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_incident_eid
+                ON incident_report(equipment_id)
+            """))
+            conn.execute(text("""
+                CREATE INDEX IF NOT EXISTS idx_inspection_eid
+                ON inspection_report(equipment_id)
+            """))
+
             conn.execute(text("TRUNCATE TABLE equipment, work_order, incident_report, inspection_report CASCADE"))
     
     data_dir = os.path.join(os.path.dirname(_BACKEND_DIR), "data")

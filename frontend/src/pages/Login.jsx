@@ -17,6 +17,7 @@ const Login = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (credentials.email === 'demo@assetmind.com' && credentials.password === 'demo') {
+      localStorage.setItem('auth', 'true');
       navigate('/app');
     } else {
       setError('Invalid credentials. Please use the demo credentials provided.');

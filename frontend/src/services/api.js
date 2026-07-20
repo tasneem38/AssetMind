@@ -4,70 +4,75 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000',
 });
 
+// ── Lightweight in-memory GET cache ──────────────────────────────────────────
+// Avoids redundant network calls when navigating back to Dashboard/Insights/
+// Asset Explorer within the same session. Cache is keyed by URL.
+const _cache = new Map();
+const CACHE_TTL_MS = 60_000; // 60 seconds
+
+export const cachedGet = async (url) => {
+  const cached = _cache.get(url);
+  if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+    return cached.data;
+  }
+  const response = await api.get(url);
+  _cache.set(url, { data: response.data, ts: Date.now() });
+  return response.data;
+};
+
+
 // ── Equipment ────────────────────────────────────────────────────────────────
 
 export const getEquipment = async () => {
-  const response = await api.get('/equipment/');
-  return response.data;
+  return cachedGet('/equipment/');
 };
 
 export const getEquipmentById = async (id) => {
-  const response = await api.get(`/equipment/${id}`);
-  return response.data;
+  return cachedGet(`/equipment/${id}`);
 };
 
 export const getBriefing = async (id) => {
-  const response = await api.get(`/equipment/${id}/briefing`);
-  return response.data;
+  return cachedGet(`/equipment/${id}/briefing`);
 };
 
 export const getEquipmentHealth = async (id) => {
-  const response = await api.get(`/equipment/${id}/health`);
-  return response.data;
+  return cachedGet(`/equipment/${id}/health`);
 };
 
 export const getEquipmentIncidents = async (id) => {
-  const response = await api.get(`/equipment/${id}/incidents`);
-  return response.data;
+  return cachedGet(`/equipment/${id}/incidents`);
 };
 
 export const getEquipmentInspections = async (id) => {
-  const response = await api.get(`/equipment/${id}/inspections`);
-  return response.data;
+  return cachedGet(`/equipment/${id}/inspections`);
 };
 
 export const getTimeline = async (id) => {
-  const response = await api.get(`/equipment/${id}/timeline`);
-  return response.data;
+  return cachedGet(`/equipment/${id}/timeline`);
 };
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 export const getDashboardStats = async () => {
-  const response = await api.get('/dashboard/');
-  return response.data;
+  return cachedGet('/dashboard/');
 };
 
 export const getHighRiskAssets = async () => {
-  const response = await api.get('/dashboard/high-risk-assets');
-  return response.data;
+  return cachedGet('/dashboard/high-risk-assets');
 };
 
 // ── Insights ─────────────────────────────────────────────────────────────────
 
 export const getKnowledgeGaps = async () => {
-  const response = await api.get('/insights/knowledge-gaps');
-  return response.data;
+  return cachedGet('/insights/knowledge-gaps');
 };
 
 export const getKnowledgeGapsSummary = async () => {
-  const response = await api.get('/insights/knowledge-gaps/summary');
-  return response.data;
+  return cachedGet('/insights/knowledge-gaps/summary');
 };
 
 export const getExecutiveInsights = async () => {
-  const response = await api.get('/insights/executive');
-  return response.data;
+  return cachedGet('/insights/executive');
 };
 
 // ── RAG / Copilot ─────────────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import AppLayout from './components/AppLayout';
+import ProtectedRoute from './components/ProtectedRoute';
 import LandingPage from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import AssetExplorer from './pages/AssetExplorer';
@@ -17,15 +18,17 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         
-        {/* Application Routes */}
-        <Route path="/app" element={<AppLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="assets" element={<AssetExplorer />} />
-          <Route path="equipment/:id" element={<EquipmentProfile />} />
-          <Route path="equipment/:id/timeline" element={<Timeline />} />
-          <Route path="timeline" element={<Timeline />} />
-          <Route path="copilot" element={<Copilot />} />
-          <Route path="insights" element={<Insights />} />
+        {/* Application Routes — protected by localStorage auth flag */}
+        <Route path="/app" element={<ProtectedRoute />}>
+          <Route element={<AppLayout />}>
+            <Route index element={<Dashboard />} />
+            <Route path="assets" element={<AssetExplorer />} />
+            <Route path="equipment/:id" element={<EquipmentProfile />} />
+            <Route path="equipment/:id/timeline" element={<Timeline />} />
+            <Route path="timeline" element={<Timeline />} />
+            <Route path="copilot" element={<Copilot />} />
+            <Route path="insights" element={<Insights />} />
+          </Route>
         </Route>
         
         {/* Catch all */}

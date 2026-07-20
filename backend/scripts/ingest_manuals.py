@@ -2,11 +2,12 @@ from pathlib import Path
 
 import os
 import sys
-from unittest.mock import MagicMock
-# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension
-grpc_mock = MagicMock()
-grpc_mock.__version__ = '1.60.0'
-sys.modules['grpc'] = grpc_mock
+# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension on Windows only
+if sys.platform == "win32":
+    from unittest.mock import MagicMock
+    grpc_mock = MagicMock()
+    grpc_mock.__version__ = '1.60.0'
+    sys.modules['grpc'] = grpc_mock
 
 import chromadb
 

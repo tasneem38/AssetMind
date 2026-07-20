@@ -2,11 +2,12 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import os
 import sys
-from unittest.mock import MagicMock
-# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension
-grpc_mock = MagicMock()
-grpc_mock.__version__ = '1.60.0'
-sys.modules['grpc'] = grpc_mock
+# Bypass Windows AppLocker blocking the grpc cygrpc.pyd extension on Windows only
+if sys.platform == "win32":
+    from unittest.mock import MagicMock
+    grpc_mock = MagicMock()
+    grpc_mock.__version__ = '1.60.0'
+    sys.modules['grpc'] = grpc_mock
 
 import chromadb
 from sentence_transformers import SentenceTransformer
@@ -114,7 +115,7 @@ Bullet list.
 
 ### Risk Assessment
 
-Low / Medium / High
+Low / Medium / High / Critical
 
 ### Recommendation
 
@@ -123,6 +124,11 @@ Specific maintenance actions.
 ### Sources
 
 List all reports and manuals used.
+
+After the markdown response, append exactly one JSON block (no extra text) with this structure:
+```json
+{"root_causes": ["cause1", "cause2"], "risk_category": "Low|Medium|High|Critical"}
+```
 """
 
 @router.post("/")
@@ -350,48 +356,57 @@ Context:
         2,
     )
 
-    # ── Risk category from LLM answer text ───────────────────────────────────
-    answer_lower = answer_text.lower()
-    if "critical" in answer_lower or "immediate" in answer_lower:
-        risk_category = "Critical"
-    elif "high" in answer_lower or "urgent" in answer_lower:
-        risk_category = "High"
-    elif "medium" in answer_lower or "moderate" in answer_lower:
-        risk_category = "Medium"
-    else:
-        risk_category = "Low"
+    # ── Strip the JSON metadata block from the answer text ────────────────────
+    import re, json
+    json_block_match = re.search(
+        r"```json\s*(\{.*?\})\s*```",
+        answer_text,
+        re.DOTALL,
+    )
+    root_causes: list = []
+    risk_category = "Low"
 
-    # ── Extract root causes from LLM response ────────────────────────────────
-    KNOWN_ROOT_CAUSES = [
-        "Bearing Wear",
-        "Bearing Failure",
-        "Cavitation",
-        "Corrosion",
-        "Overheating",
-        "Seal Leakage",
-        "Vibration",
-        "Misalignment",
-        "Fouling",
-        "Lubrication Failure",
-        "Overload",
-        "Insulation Failure",
-        "Pitting",
-    ]
-    root_causes = [
-        cause for cause in KNOWN_ROOT_CAUSES
-        if cause.lower() in answer_lower
-    ]
-    # Fall back to top incident failure modes from relational data
-    if not root_causes and relational_sources:
-        seen = set()
-        for src in relational_sources:
-            if src["type"] == "incident":
-                fm = src["data"].get("failure_mode")
-                if fm and fm not in seen:
-                    root_causes.append(fm)
-                    seen.add(fm)
-                    if len(root_causes) >= 3:
-                        break
+    if json_block_match:
+        try:
+            meta = json.loads(json_block_match.group(1))
+            root_causes = meta.get("root_causes", [])
+            risk_category = meta.get("risk_category", "Low")
+        except json.JSONDecodeError:
+            pass
+        # Remove the JSON block from the displayed answer
+        answer_text = answer_text[: json_block_match.start()].strip()
+
+    # Fallback: keyword-scan answer prose if JSON block missing
+    if not root_causes:
+        answer_lower = answer_text.lower()
+        KNOWN_ROOT_CAUSES = [
+            "Bearing Wear", "Bearing Failure", "Cavitation", "Corrosion",
+            "Overheating", "Seal Leakage", "Vibration", "Misalignment",
+            "Fouling", "Lubrication Failure", "Overload", "Insulation Failure",
+            "Pitting", "Gasket Failure",
+        ]
+        root_causes = [c for c in KNOWN_ROOT_CAUSES if c.lower() in answer_lower]
+        # Last resort: pull from incident failure_mode
+        if not root_causes and relational_sources:
+            seen: set = set()
+            for src in relational_sources:
+                if src["type"] == "incident":
+                    fm = src["data"].get("failure_mode")
+                    if fm and fm not in seen:
+                        root_causes.append(fm)
+                        seen.add(fm)
+                        if len(root_causes) >= 3:
+                            break
+
+    # Fallback risk category from prose if JSON block missing
+    if risk_category == "Low" and json_block_match is None:
+        answer_lower = answer_text.lower()
+        if "critical" in answer_lower or "immediate" in answer_lower:
+            risk_category = "Critical"
+        elif "high" in answer_lower or "urgent" in answer_lower:
+            risk_category = "High"
+        elif "medium" in answer_lower or "moderate" in answer_lower:
+            risk_category = "Medium"
 
     # ── Extract recommended actions (lines after ### Recommendation) ──────────
     recommended_actions: list = []
